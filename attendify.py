@@ -636,6 +636,24 @@ def save_meeting():
         print("🔴 Error saving meeting:", e)
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/employees', methods=['GET'])
+def get_all_employees():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT empid, full_name FROM Employee")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        employees = [{"empid": row[0], "full_name": row[1]} for row in rows]
+
+        return jsonify(employees), 200
+    except Exception as e:
+        print("🔴 Error fetching employees:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
