@@ -618,19 +618,33 @@ def save_meeting():
         location = data.get('location')
         organizer_id = data.get('organizer_id')  # optional
 
+        attendees = data.get('attendees', [])  # list of employee IDs
+
         conn = get_db_connection()
         cur = conn.cursor()
 
+        # Insert meeting
         cur.execute("""
             INSERT INTO meetings (title, meeting_date, start_time, end_time, location, organizer_id)
             VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING meeting_id
         """, (title, meeting_date, start_time, end_time, location, organizer_id))
+        
+        meeting_id = cur.fetchone()[0]  # get the new meeting ID
+
+        # Insert attendees
+        for emp_id in attendees:
+            cur.execute("""
+    INSERT INTO meeting_attendees (meeting_id, employee_id, role, status)
+    VALUES (%s, %s, %s, %s)
+""", (meeting_id, emp_id, 'Attendee', 'Present'))
+
 
         conn.commit()
         cur.close()
         conn.close()
 
-        return jsonify({"message": "Meeting added successfully"}), 201
+        return jsonify({"message": "Meeting and attendees added successfully"}), 201
 
     except Exception as e:
         print("🔴 Error saving meeting:", e)
