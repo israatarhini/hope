@@ -667,6 +667,29 @@ def get_employees_checkbox():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/get-pending-meetings', methods=['GET'])
+def get_pending_meetings():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT title, description 
+            FROM meetings 
+            WHERE manager_approval = FALSE
+        """)
+        meetings = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Format result
+        result = [{"title": row[0], "description": row[1]} for row in meetings]
+
+        return jsonify(result), 200
+    except Exception as e:
+        print("🔴 Error fetching pending meetings:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
