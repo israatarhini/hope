@@ -699,7 +699,7 @@ def update_meeting_status():
     try:
         data = request.json
         meeting_id = data.get('meeting_id')
-        new_status = data.get('status')
+        new_status = data.get('manager_approval')  # ✅ matches what Android sends
 
         conn = get_db_connection()
         cur = conn.cursor()
