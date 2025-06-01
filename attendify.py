@@ -699,7 +699,7 @@ def update_meeting_status():
     try:
         data = request.json
         meeting_id = data.get('meeting_id')
-        new_status = data.get('manager_approval')  # ✅ matches what Android sends
+        new_status = 1 if data.get('manager_approval') else 0  # ✅ converts True/False to 1/0
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -708,8 +708,11 @@ def update_meeting_status():
             UPDATE meetings SET manager_approval = %s WHERE meeting_id = %s
         """, (new_status, meeting_id))
 
-
         conn.commit()
+
+        if cur.rowcount == 0:
+            return jsonify({"error": "No meeting found with the given ID"}), 404
+
         cur.close()
         conn.close()
 
