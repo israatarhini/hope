@@ -674,25 +674,63 @@ def get_pending_meetings():
         cur = conn.cursor()
         cur.execute("""
             SELECT 
+                m.meeting_id,
                 m.title, 
                 m.description, 
-                e.full_name 
+                m.meeting_date,
+                m.start_time,
+                m.end_time,
+                m.location,
+                m.manager_approval,
+                e.full_name AS employee_name
             FROM meetings m
             JOIN Employee e ON m.organizer_id = e.empid
             WHERE m.manager_approval = FALSE
         """)
-        meetings = cur.fetchall()
+        rows = cur.fetchall()
         cur.close()
         conn.close()
 
-        # Format result
-        result = [{"title": row[0], "description": row[1], "employee_name": row[2]} for row in meetings]
+        result = []
+        for row in rows:
+            result.append({
+                "meeting_id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "meeting_date": row[3],
+                "start_time": row[4],
+                "end_time": row[5],
+                "location": row[6],
+                "manager_approval": row[7],
+                "employee_name": row[8]
+            })
 
         return jsonify(result), 200
     except Exception as e:
         print("🔴 Error fetching pending meetings:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/all-meetings', methods=['GET'])
+def get_all_meetings():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT 
+            m.meeting_id,
+            m.title,
+            m.description,
+            m.meeting_date,
+            m.start_time,
+            m.end_time,
+            m.location,
+            m.manager_approval,
+            e.name AS employee_name
+        FROM meetings m
+        JOIN Employee e ON m.organizer_id = e.empid
+    """)
+    meetings = cur.fetchall()
+    return jsonify(meetings)
 
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
