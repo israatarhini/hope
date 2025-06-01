@@ -612,23 +612,25 @@ def save_meeting():
         print("🟡 Received meeting data:", data)
 
         title = data.get('title')
+        description = data.get('description')  # NEW field
         meeting_date = data.get('meeting_date')
         start_time = data.get('start_time')
         end_time = data.get('end_time')
         location = data.get('location')
-        organizer_id = data.get('organizer_id')  # optional
+        organizer_id = data.get('organizer_id')
+        manager_approval = data.get('manager_approval', False)  # default false
         attendees = data.get('attendees', [])  # list of employee IDs
 
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Insert meeting
+        # Insert meeting with new fields
         cur.execute("""
-            INSERT INTO meetings (title, meeting_date, start_time, end_time, location, organizer_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (title, meeting_date, start_time, end_time, location, organizer_id))
+            INSERT INTO meetings (title, description, meeting_date, start_time, end_time, location, organizer_id, manager_approval)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (title, description, meeting_date, start_time, end_time, location, organizer_id, manager_approval))
 
-        meeting_id = cur.lastrowid  # ✅ Correct way to get inserted ID
+        meeting_id = cur.lastrowid
 
         # Insert attendees
         for emp_id in attendees:
@@ -641,7 +643,7 @@ def save_meeting():
         cur.close()
         conn.close()
 
-        return jsonify({"message": "Meeting and attendees added successfully"}), 201
+        return jsonify({"message": "Meeting and attendees added successfully!"}), 200
 
     except Exception as e:
         print("🔴 Error saving meeting:", e)
