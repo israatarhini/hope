@@ -697,6 +697,7 @@ def get_pending_meetings():
 @app.route('/api/update-meeting-status', methods=['POST'])
 def update_meeting_status():
     try:
+        print("🔵 update_meeting_status route called")
         data = request.json
         meeting_id = data.get('meeting_id')
         new_status = 1 if data.get('manager_approval') else 0  # ✅ converts True/False to 1/0
