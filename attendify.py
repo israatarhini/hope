@@ -637,7 +637,7 @@ def save_meeting():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/employees', methods=['GET'])
-def get_all_employees():
+def get_employees_checkbox():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
