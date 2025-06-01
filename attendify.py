@@ -694,6 +694,32 @@ def get_pending_meetings():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/update-meeting-status', methods=['POST'])
+def update_meeting_status():
+    try:
+        data = request.json
+        meeting_id = data.get('meeting_id')
+        new_status = data.get('status')
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            UPDATE meetings SET manager_approval = %s WHERE meeting_id = %s
+        """, (new_status, meeting_id))
+
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({"message": "Meeting status updated successfully"}), 200
+
+    except Exception as e:
+        print("🔴 Error in updating meeting status:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
