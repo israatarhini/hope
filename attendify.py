@@ -674,9 +674,11 @@ def get_pending_meetings():
         cur = conn.cursor()
         cur.execute("""
             SELECT 
+                m.meeting_id,
                 m.title, 
                 m.description, 
-                e.full_name 
+                e.full_name,
+                m.manager_approval
             FROM meetings m
             JOIN Employee e ON m.organizer_id = e.empid
             WHERE m.manager_approval = FALSE
@@ -686,7 +688,13 @@ def get_pending_meetings():
         conn.close()
 
         # Format result
-        result = [{"title": row[0], "description": row[1], "employee_name": row[2]} for row in meetings]
+        result = [{
+            "meeting_id": row[0], 
+            "title": row[1], 
+            "description": row[2], 
+            "employee_name": row[3],
+            "manager_approval": bool(row[4])
+        } for row in meetings]
 
         return jsonify(result), 200
     except Exception as e:
