@@ -697,10 +697,10 @@ def get_pending_meetings():
 @app.route('/api/update-meeting-status', methods=['POST'])
 def update_meeting_status():
     try:
-        print("🔵 update_meeting_status route called")
         data = request.json
+        print("Data received:", data)
         meeting_id = data.get('meeting_id')
-        new_status = 1 if data.get('manager_approval') else 0  # ✅ converts True/False to 1/0
+        new_status = 1 if data.get('manager_approval') else 0
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -711,12 +711,15 @@ def update_meeting_status():
 
         conn.commit()
 
+        print(f"Rows affected: {cur.rowcount}")
         if cur.rowcount == 0:
+            print("Returning 404 - no meeting found")
             return jsonify({"error": "No meeting found with the given ID"}), 404
 
         cur.close()
         conn.close()
 
+        print("Returning 200 - success")
         return jsonify({"message": "Meeting status updated successfully"}), 200
 
     except Exception as e:
