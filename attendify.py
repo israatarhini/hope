@@ -264,14 +264,28 @@ def save_coffee_break():
 
 @app.route('/api/get-all-employees', methods=['GET'])
 def get_all_employees():
+    print("API /api/get-all-employees called")  # Debug log
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT empid, full_name FROM Employee")
-        employees = [{"empid": row[0], "full_name": row[1]} for row in cur.fetchall()]
+        cur.execute("SELECT empid, full_name, username, phone_number, email, occupation, faculty FROM Employee")
+        employees = []
+        for row in cur.fetchall():
+            employees.append({
+                "empid": row[0],
+                "full_name": row[1],
+                "username": row[2],
+                "phone_number": row[3],
+                "email": row[4],
+                "occupation": row[5],
+                "faculty": row[6]
+            })
         cur.close()
         conn.close()
-        return jsonify(employees), 200
+
+        print(f"Returning {len(employees)} employees wrapped in object")  # Debug log
+        return jsonify({"employees": employees}), 200
+
     except Exception as e:
         print("Get all employees error:", e)
         traceback.print_exc()
