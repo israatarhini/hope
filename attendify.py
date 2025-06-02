@@ -687,7 +687,7 @@ def get_pending_meetings():
                 m.manager_approval
             FROM meetings m
             JOIN Employee e ON m.organizer_id = e.empid
-            WHERE m.manager_approval = FALSE
+            WHERE m.manager_approval = "Pending"
         """)
 
         meetings = cur.fetchall()
