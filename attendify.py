@@ -621,6 +621,10 @@ def save_meeting():
 
         # Use 'Pending' as the default if not explicitly provided
         manager_approval = data.get('manager_approval', 'Pending')
+        if isinstance(manager_approval, bool):
+            manager_approval = "Approved" if manager_approval else "Rejected"
+        elif not isinstance(manager_approval, str):
+            manager_approval = "Pending"
         attendees = data.get('attendees', [])
 
         conn = get_db_connection()
