@@ -612,19 +612,21 @@ def save_meeting():
         print("🟡 Received meeting data:", data)
 
         title = data.get('title')
-        description = data.get('description')  # NEW field
+        description = data.get('description')
         meeting_date = data.get('meeting_date')
         start_time = data.get('start_time')
         end_time = data.get('end_time')
         location = data.get('location')
         organizer_id = data.get('organizer_id')
-        manager_approval = data.get('manager_approval', False)  # default false
-        attendees = data.get('attendees', [])  # list of employee IDs
+
+        # Use 'Pending' as the default if not explicitly provided
+        manager_approval = data.get('manager_approval', 'Pending')
+        attendees = data.get('attendees', [])
 
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Insert meeting with new fields
+        # Insert meeting with manager_approval as text
         cur.execute("""
             INSERT INTO meetings (title, description, meeting_date, start_time, end_time, location, organizer_id, manager_approval)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -632,7 +634,7 @@ def save_meeting():
 
         meeting_id = cur.lastrowid
 
-        # Insert attendees
+        # Insert attendees with default role and status
         for emp_id in attendees:
             cur.execute("""
                 INSERT INTO meeting_attendees (meeting_id, employee_id, role, status)
@@ -698,8 +700,7 @@ def get_pending_meetings():
     "employee_name": row[4],
     "manager_approval": bool(row[5])
 } for row in meetings]
-
-
+        print("Debug: meetings response:", result)
         return jsonify(result), 200
     except Exception as e:
         print("🔴 Error fetching pending meetings:", e)
