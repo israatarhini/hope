@@ -693,24 +693,28 @@ def get_pending_meetings():
             JOIN Employee e ON m.organizer_id = e.empid
             WHERE LOWER(m.manager_approval) = 'pending'
         """)
-
         meetings = cur.fetchall()
-        print("✅ Retrieved meetings:", meetings)
+
+        for row in meetings:
+            print(f"Meeting ID: {row[0]}, Date: {row[3]}, Type: {type(row[3])}")
+
         cur.close()
         conn.close()
 
-        result = [{
-            "meeting_id": row[0],
-            "title": row[1],
-            "description": row[2],
-            "meeting_date": row[3].isoformat(),  # Convert datetime.date to string
-            "start_time": str(row[4]),           # Convert timedelta to HH:MM:SS string
-            "end_time": str(row[5]),             # Convert timedelta to HH:MM:SS string
-            "location": row[6],
-            "organizer_id": row[7],
-            "manager_approval": row[8],
-            "employee_name": row[9]
-        } for row in meetings]
+        result = []
+        for row in meetings:
+            result.append({
+                "meeting_id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "meeting_date": str(row[3]) if row[3] else None,
+                "start_time": str(row[4]) if row[4] else None,
+                "end_time": str(row[5]) if row[5] else None,
+                "location": row[6],
+                "organizer_id": row[7],
+                "manager_approval": row[8],
+                "employee_name": row[9]
+            })
 
         return jsonify(result), 200
 
@@ -718,7 +722,7 @@ def get_pending_meetings():
         print("🔴 Error fetching pending meetings:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+
 @app.route('/api/update-meeting-status', methods=['POST'])
 def update_meeting_status():
     try:
