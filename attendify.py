@@ -678,30 +678,38 @@ def get_pending_meetings():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT 
-                m.meeting_id,
-                m.title, 
-                m.description, 
-                m.organizer_id,   
-                e.full_name,
-                m.manager_approval
-            FROM meetings m
-            JOIN Employee e ON m.organizer_id = e.empid
-            WHERE m.manager_approval = "Pending"
-        """)
+    SELECT 
+        m.meeting_id,
+        m.title,
+        m.description,
+        m.meeting_date,
+        m.start_time,
+        m.end_time,
+        m.location,
+        m.organizer_id,
+        m.manager_approval,
+        e.full_name
+    FROM meetings m
+    JOIN Employee e ON m.organizer_id = e.empid
+    WHERE m.manager_approval = "Pending"
+""")
 
         meetings = cur.fetchall()
         cur.close()
         conn.close()
 
         result = [{
-            "meeting_id": row[0], 
-            "title": row[1], 
-            "description": row[2],
-            "organizer_id": row[3],      
-            "employee_name": row[4],
-            "manager_approval": "Pending"  # Always return string value
-        } for row in meetings]
+    "meeting_id": row[0],
+    "title": row[1],
+    "description": row[2],
+    "meeting_date": row[3],
+    "start_time": row[4],
+    "end_time": row[5],
+    "location": row[6],
+    "organizer_id": row[7],
+    "manager_approval": row[8],
+    "employee_name": row[9]
+} for row in meetings]
 
         return jsonify(result), 200
     except Exception as e:
