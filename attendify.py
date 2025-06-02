@@ -756,27 +756,29 @@ def get_my_meetings():
 
         # Query to get all meetings where employee is an attendee
         cur.execute("""
-            SELECT 
-                m.meeting_id,
-                m.title,
-                m.description,
-                m.meeting_date,
-                m.start_time,
-                m.end_time,
-                m.location,
-                m.organizer_id,
-                e.full_name as organizer_name,
-                m.manager_approval,
-                ma.role,
-                ma.status,
-                ma.check_in_time,
-                ma.check_out_time
-            FROM meeting_attendees ma
-            JOIN meetings m ON ma.meeting_id = m.meeting_id
-            JOIN Employee e ON m.organizer_id = e.empid
-            WHERE ma.employee_id = %s
-            ORDER BY m.meeting_date DESC, m.start_time DESC
-        """, (empid,))
+    SELECT 
+        m.meeting_id,
+        m.title,
+        m.description,
+        m.meeting_date,
+        m.start_time,
+        m.end_time,
+        m.location,
+        m.organizer_id,
+        e.full_name as organizer_name,
+        m.manager_approval,
+        ma.role,
+        ma.status,
+        ma.check_in_time,
+        ma.check_out_time
+    FROM meeting_attendees ma
+    JOIN meetings m ON ma.meeting_id = m.meeting_id
+    JOIN Employee e ON m.organizer_id = e.empid
+    WHERE ma.employee_id = %s
+      AND m.manager_approval = 'Approved'
+    ORDER BY m.meeting_date DESC, m.start_time DESC
+""", (empid,))
+
 
         meetings = cur.fetchall()
 
