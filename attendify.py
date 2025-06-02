@@ -678,21 +678,21 @@ def get_pending_meetings():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-    SELECT 
-        m.meeting_id,
-        m.title,
-        m.description,
-        m.meeting_date,
-        m.start_time,
-        m.end_time,
-        m.location,
-        m.organizer_id,
-        m.manager_approval,
-        e.full_name
-    FROM meetings m
-    JOIN Employee e ON m.organizer_id = e.empid
-WHERE LOWER(m.manager_approval) = 'pending'
-""")
+            SELECT 
+                m.meeting_id,
+                m.title,
+                m.description,
+                m.meeting_date,
+                m.start_time,
+                m.end_time,
+                m.location,
+                m.organizer_id,
+                m.manager_approval,
+                e.full_name
+            FROM meetings m
+            JOIN Employee e ON m.organizer_id = e.empid
+            WHERE LOWER(m.manager_approval) = 'pending'
+        """)
 
         meetings = cur.fetchall()
         print("✅ Retrieved meetings:", meetings)
@@ -700,24 +700,25 @@ WHERE LOWER(m.manager_approval) = 'pending'
         conn.close()
 
         result = [{
-    "meeting_id": row[0],
-    "title": row[1],
-    "description": row[2],
-    "meeting_date": row[3],
-    "start_time": row[4],
-    "end_time": row[5],
-    "location": row[6],
-    "organizer_id": row[7],
-    "manager_approval": row[8],
-    "employee_name": row[9]
-} for row in meetings]
+            "meeting_id": row[0],
+            "title": row[1],
+            "description": row[2],
+            "meeting_date": row[3].isoformat(),  # Convert datetime.date to string
+            "start_time": str(row[4]),           # Convert timedelta to HH:MM:SS string
+            "end_time": str(row[5]),             # Convert timedelta to HH:MM:SS string
+            "location": row[6],
+            "organizer_id": row[7],
+            "manager_approval": row[8],
+            "employee_name": row[9]
+        } for row in meetings]
 
         return jsonify(result), 200
+
     except Exception as e:
         print("🔴 Error fetching pending meetings:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/api/update-meeting-status', methods=['POST'])
 def update_meeting_status():
     try:
