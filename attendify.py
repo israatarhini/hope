@@ -743,6 +743,73 @@ def update_meeting_status():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/get-my-meetings', methods=['POST'])
+def get_my_meetings():
+    try:
+        data = request.json
+        empid = data.get('empid')
+        if not empid:
+            return jsonify({"error": "Employee ID not provided"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Query to get all meetings where employee is an attendee
+        cur.execute("""
+            SELECT 
+                m.meeting_id,
+                m.title,
+                m.description,
+                m.meeting_date,
+                m.start_time,
+                m.end_time,
+                m.location,
+                m.organizer_id,
+                e.full_name as organizer_name,
+                m.manager_approval,
+                ma.role,
+                ma.status,
+                ma.check_in_time,
+                ma.check_out_time
+            FROM meeting_attendees ma
+            JOIN meetings m ON ma.meeting_id = m.meeting_id
+            JOIN Employee e ON m.organizer_id = e.empid
+            WHERE ma.employee_id = %s
+            ORDER BY m.meeting_date DESC, m.start_time DESC
+        """, (empid,))
+
+        meetings = cur.fetchall()
+
+        # Build a list of dictionaries for JSON response
+        meetings_list = []
+        for row in meetings:
+            meetings_list.append({
+                "meeting_id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "meeting_date": str(row[3]),       # Convert date/time to string for JSON
+                "start_time": str(row[4]),
+                "end_time": str(row[5]),
+                "location": row[6],
+                "organizer_id": row[7],
+                "organizer_name": row[8],
+                "manager_approval": row[9],
+                "role": row[10],
+                "status": row[11],
+                "check_in_time": str(row[12]) if row[12] else None,
+                "check_out_time": str(row[13]) if row[13] else None
+            })
+
+        cur.close()
+        conn.close()
+
+        return jsonify(meetings_list), 200
+
+    except Exception as e:
+        print("🔴 Error fetching meetings for employee:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
