@@ -691,10 +691,11 @@ def get_pending_meetings():
         e.full_name
     FROM meetings m
     JOIN Employee e ON m.organizer_id = e.empid
-    WHERE m.manager_approval = "Pending"
+WHERE LOWER(m.manager_approval) = 'pending'
 """)
 
         meetings = cur.fetchall()
+        print("✅ Retrieved meetings:", meetings)
         cur.close()
         conn.close()
 
