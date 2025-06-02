@@ -621,10 +621,9 @@ def save_meeting():
 
         # Use 'Pending' as the default if not explicitly provided
         manager_approval = data.get('manager_approval', 'Pending')
-        if isinstance(manager_approval, bool):
-            manager_approval = "Approved" if manager_approval else "Rejected"
-        elif not isinstance(manager_approval, str):
-            manager_approval = "Pending"
+        if manager_approval not in ['Approved', 'Rejected', 'Pending']:
+            manager_approval = 'Pending'
+
         attendees = data.get('attendees', [])
 
         conn = get_db_connection()
@@ -679,32 +678,31 @@ def get_pending_meetings():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-    SELECT 
-        m.meeting_id,
-        m.title, 
-        m.description, 
-        m.organizer_id,   
-        e.full_name,
-        m.manager_approval
-        FROM meetings m
-        JOIN Employee e ON m.organizer_id = e.empid
-        WHERE m.manager_approval = FALSE
-""")
+            SELECT 
+                m.meeting_id,
+                m.title, 
+                m.description, 
+                m.organizer_id,   
+                e.full_name,
+                m.manager_approval
+            FROM meetings m
+            JOIN Employee e ON m.organizer_id = e.empid
+            WHERE m.manager_approval = FALSE
+        """)
 
         meetings = cur.fetchall()
         cur.close()
         conn.close()
 
-        # Format result
         result = [{
-    "meeting_id": row[0], 
-    "title": row[1], 
-    "description": row[2],
-    "organizer_id": row[3],      
-    "employee_name": row[4],
-    "manager_approval": bool(row[5])
-} for row in meetings]
-        print("Debug: meetings response:", result)
+            "meeting_id": row[0], 
+            "title": row[1], 
+            "description": row[2],
+            "organizer_id": row[3],      
+            "employee_name": row[4],
+            "manager_approval": "Pending"  # Always return string value
+        } for row in meetings]
+
         return jsonify(result), 200
     except Exception as e:
         print("🔴 Error fetching pending meetings:", e)
@@ -716,8 +714,12 @@ def update_meeting_status():
     try:
         data = request.json
         print("Data received:", data)
+
         meeting_id = data.get('meeting_id')
-        new_status = 1 if data.get('manager_approval') else 0
+        new_status = data.get('manager_approval')  # Expecting string: "Approved" or "Rejected"
+
+        if new_status not in ['Approved', 'Rejected']:
+            return jsonify({"error": "Invalid status. Must be 'Approved' or 'Rejected'."}), 400
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -728,15 +730,12 @@ def update_meeting_status():
 
         conn.commit()
 
-        print(f"Rows affected: {cur.rowcount}")
         if cur.rowcount == 0:
-            print("Returning 404 - no meeting found")
             return jsonify({"error": "No meeting found with the given ID"}), 404
 
         cur.close()
         conn.close()
 
-        print("Returning 200 - success")
         return jsonify({"message": "Meeting status updated successfully"}), 200
 
     except Exception as e:
