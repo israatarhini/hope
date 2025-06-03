@@ -826,6 +826,38 @@ def get_my_meetings():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/attendance-checkins', methods=['GET'])
+def get_attendance_checkins():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT e.full_name, a.checkinDate, a.checkinTime
+            FROM attendance a
+            JOIN Employee e ON a.empid = e.empid
+            WHERE a.checkinDate IS NOT NULL AND a.checkinTime IS NOT NULL
+            ORDER BY a.checkinDate ASC, a.checkinTime ASC
+        """)
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        attendance_data = []
+        for row in results:
+            attendance_data.append({
+                "employee": row[0],
+                "date": row[1].strftime('%Y-%m-%d'),
+                "time": row[2].strftime('%H:%M:%S')
+            })
+
+        return jsonify({"attendance": attendance_data}), 200
+
+    except Exception as e:
+        print("🔴 Attendance fetch error:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
