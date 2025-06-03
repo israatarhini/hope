@@ -967,6 +967,48 @@ def get_weekly_attendance():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
+
+@app.route('/api/leave-summary', methods=['GET'])
+def get_leave_summary():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Optional: parse optional start_date and end_date query params for filtering
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        query = """
+            SELECT leave_type, status, COUNT(*) as leave_count
+            FROM leave_request
+        """
+        params = []
+
+        if start_date and end_date:
+            query += " WHERE leave_start_date >= %s AND leave_end_date <= %s"
+            params = [start_date, end_date]
+
+        query += " GROUP BY leave_type, status"
+
+        cur.execute(query, params)
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Structure data: {leave_type: {status: count, ...}, ...}
+        summary = {}
+        for leave_type, status, count in results:
+            if leave_type not in summary:
+                summary[leave_type] = {}
+            summary[leave_type][status] = count
+
+        return jsonify({"leave_summary": summary}), 200
+
+    except Exception as e:
+        print("🔴 Leave Summary Fetch Error:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+        
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
