@@ -6,7 +6,7 @@ pymysql.install_as_MySQLdb()
 import MySQLdb
 import os
 import traceback
-
+from datetime import timedelta
 
 
 app = Flask(__name__)
@@ -845,10 +845,19 @@ def get_attendance_checkins():
 
         attendance_data = []
         for row in results:
+            checkin_time = row[2]
+            if isinstance(checkin_time, timedelta):
+                total_seconds = int(checkin_time.total_seconds())
+                hours, remainder = divmod(total_seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            else:
+                formatted_time = str(checkin_time)
+
             attendance_data.append({
                 "employee": row[0],
                 "date": row[1].strftime('%Y-%m-%d'),
-                "time": row[2].strftime('%H:%M:%S')
+                "time": formatted_time
             })
 
         return jsonify({"attendance": attendance_data}), 200
@@ -857,7 +866,7 @@ def get_attendance_checkins():
         print("🔴 Attendance fetch error:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
+    
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
