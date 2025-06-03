@@ -829,16 +829,27 @@ def get_my_meetings():
 @app.route('/api/attendance-checkins', methods=['GET'])
 def get_attendance_checkins():
     try:
+        date_filter = request.args.get('date')  # e.g., '2025-06-04'
         conn = get_db_connection()
         cur = conn.cursor()
 
-        cur.execute("""
-            SELECT e.full_name, a.checkinDate, a.checkinTime
-            FROM attendance a
-            JOIN Employee e ON a.empid = e.empid
-            WHERE a.checkinDate IS NOT NULL AND a.checkinTime IS NOT NULL
-            ORDER BY a.checkinDate ASC, a.checkinTime ASC
-        """)
+        if date_filter:
+            cur.execute("""
+                SELECT e.full_name, a.checkinDate, a.checkinTime
+                FROM attendance a
+                JOIN Employee e ON a.empid = e.empid
+                WHERE a.checkinDate = %s AND a.checkinTime IS NOT NULL
+                ORDER BY a.checkinTime ASC
+            """, (date_filter,))
+        else:
+            cur.execute("""
+                SELECT e.full_name, a.checkinDate, a.checkinTime
+                FROM attendance a
+                JOIN Employee e ON a.empid = e.empid
+                WHERE a.checkinDate IS NOT NULL AND a.checkinTime IS NOT NULL
+                ORDER BY a.checkinDate ASC, a.checkinTime ASC
+            """)
+
         results = cur.fetchall()
         cur.close()
         conn.close()
@@ -866,7 +877,7 @@ def get_attendance_checkins():
         print("🔴 Attendance fetch error:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
