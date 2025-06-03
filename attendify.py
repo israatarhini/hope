@@ -6,6 +6,7 @@ pymysql.install_as_MySQLdb()
 import MySQLdb
 import os
 import traceback
+from datetime import datetime, timedelta
 from datetime import timedelta
 
 
@@ -881,28 +882,31 @@ def get_attendance_checkins():
 @app.route('/api/weekly-attendance', methods=['GET'])
 def get_weekly_attendance():
     try:
-        today = datetime.today().date()
-        start_date = today - timedelta(days=6)  # Last 7 days including today
+        # ⛏️ Parse the start_date from query param, fallback to today - 6 days
+        start_param = request.args.get('start_date')
+        if start_param:
+            start_date = datetime.strptime(start_param, "%Y-%m-%d").date()
+        else:
+            start_date = datetime.today().date() - timedelta(days=6)
+
+        end_date = start_date + timedelta(days=6)
 
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Retrieve all employees
         cur.execute("SELECT empid, full_name FROM Employee")
         employees = cur.fetchall()
 
-        # Retrieve check-ins within the last 7 days
         cur.execute("""
             SELECT empid, checkinDate
             FROM attendance
             WHERE checkinDate BETWEEN %s AND %s AND checkinTime IS NOT NULL
-        """, (start_date, today))
+        """, (start_date, end_date))
 
         checkins = cur.fetchall()
         checked_in = {(row[0], row[1]) for row in checkins}
 
         attendance_summary = []
-
         for empid, full_name in employees:
             present_days = sum(
                 1 for i in range(7)
