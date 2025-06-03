@@ -878,6 +878,49 @@ def get_attendance_checkins():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/weekly-attendance', methods=['GET'])
+def get_weekly_attendance():
+    try:
+        today = datetime.today().date()
+        start_date = today - timedelta(days=6)  # Last 7 days including today
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Retrieve all employees
+        cur.execute("SELECT empid, full_name FROM Employee")
+        employees = cur.fetchall()
+
+        # Retrieve check-ins within the last 7 days
+        cur.execute("""
+            SELECT empid, checkinDate
+            FROM attendance
+            WHERE checkinDate BETWEEN %s AND %s AND checkinTime IS NOT NULL
+        """, (start_date, today))
+
+        checkins = cur.fetchall()
+        checked_in = {(row[0], row[1]) for row in checkins}
+
+        attendance_summary = []
+
+        for empid, full_name in employees:
+            present_days = sum(
+                1 for i in range(7)
+                if (empid, start_date + timedelta(days=i)) in checked_in
+            )
+            attendance_summary.append({
+                "employee": full_name,
+                "present": present_days,
+                "absent": 7 - present_days
+            })
+
+        return jsonify({"attendance_summary": attendance_summary}), 200
+
+    except Exception as e:
+        print("🔴 Weekly Attendance Fetch Error:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
