@@ -172,6 +172,68 @@ def get_employee_full(empid):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+# @app.route('/api/checkin', methods=['POST'])
+# def checkin():
+#     try:
+#         data = request.json
+#         empid = data.get('empid')
+#         date = data.get('date')
+#         time = data.get('time')
+
+#         conn = get_db_connection()
+#         cur = conn.cursor()
+#         cur.execute("""
+#             INSERT INTO attendance (empid, checkinDate, checkinTime)
+#             VALUES (%s, %s, %s)
+#             ON DUPLICATE KEY UPDATE checkinTime = VALUES(checkinTime)
+#         """, (empid, date, time))
+
+#         conn.commit()
+#         cur.close()
+#         conn.close()
+
+#         return jsonify({"message": "Check-in saved successfully"}), 201
+
+#     except Exception as e:
+#         print("Check-in error:", e)
+#         traceback.print_exc()
+#         return jsonify({"error": str(e)}), 500
+
+# @app.route('/api/checkout', methods=['POST'])
+# def check_out():
+#     try:
+#         data = request.json
+#         empid = data.get('empid')
+#         date = data.get('date')
+#         time = data.get('time')
+
+#         if not all([empid, date, time]):
+#             return jsonify({"error": "Missing required fields"}), 400
+
+#         conn = get_db_connection()
+#         cur = conn.cursor()
+
+#         cur.execute("SELECT id FROM attendance WHERE empid = %s AND checkoutDate = %s", (empid, date))
+#         result = cur.fetchone()
+
+#         if result:
+#             cur.execute("UPDATE attendance SET checkoutTime = %s WHERE empid = %s AND checkoutDate = %s",
+#                         (time, empid, date))
+#         else:
+#             cur.execute("INSERT INTO attendance (empid, checkoutDate, checkoutTime) VALUES (%s, %s, %s)",
+#                         (empid, date, time))
+
+#         conn.commit()
+#         cur.close()
+#         conn.close()
+
+#         return jsonify({"message": "Check-out saved"}), 201
+
+#     except Exception as e:
+#         print("Checkout error:", e)
+#         traceback.print_exc()
+#         return jsonify({"error": str(e)}), 500
+
 @app.route('/api/checkin', methods=['POST'])
 def checkin():
     try:
@@ -180,13 +242,23 @@ def checkin():
         date = data.get('date')
         time = data.get('time')
 
+        if not all([empid, date, time]):
+            return jsonify({"error": "Missing required fields"}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO attendance (empid, checkinDate, checkinTime)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE checkinTime = VALUES(checkinTime)
-        """, (empid, date, time))
+
+        # Check if already checked in today
+        cur.execute("SELECT id FROM attendance WHERE empid = %s AND checkinDate = %s", (empid, date))
+        result = cur.fetchone()
+
+        if result:
+            return jsonify({"error": "You have already checked in today."}), 400
+        else:
+            cur.execute("""
+                INSERT INTO attendance (empid, checkinDate, checkinTime)
+                VALUES (%s, %s, %s)
+            """, (empid, date, time))
 
         conn.commit()
         cur.close()
@@ -198,6 +270,7 @@ def checkin():
         print("Check-in error:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/checkout', methods=['POST'])
 def check_out():
@@ -213,27 +286,29 @@ def check_out():
         conn = get_db_connection()
         cur = conn.cursor()
 
+        # Check if already checked out today
         cur.execute("SELECT id FROM attendance WHERE empid = %s AND checkoutDate = %s", (empid, date))
         result = cur.fetchone()
 
         if result:
-            cur.execute("UPDATE attendance SET checkoutTime = %s WHERE empid = %s AND checkoutDate = %s",
-                        (time, empid, date))
+            return jsonify({"error": "You have already checked out today."}), 400
         else:
-            cur.execute("INSERT INTO attendance (empid, checkoutDate, checkoutTime) VALUES (%s, %s, %s)",
-                        (empid, date, time))
+            cur.execute("""
+                INSERT INTO attendance (empid, checkoutDate, checkoutTime)
+                VALUES (%s, %s, %s)
+            """, (empid, date, time))
 
         conn.commit()
         cur.close()
         conn.close()
 
-        return jsonify({"message": "Check-out saved"}), 201
+        return jsonify({"message": "Check-out saved successfully"}), 201
 
     except Exception as e:
         print("Checkout error:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/api/coffee-break', methods=['POST'])
 def save_coffee_break():
     try:
