@@ -740,8 +740,15 @@ def get_pending_meetings():
 @app.route('/api/get-accepted-meetings', methods=['GET'])
 def get_accepted_meetings():
     try:
+        # Step 1: Get the logged-in employee ID from the query parameters
+        employee_id = request.args.get('employee_id')
+        if not employee_id:
+            return jsonify({"error": "Employee ID is required"}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # Step 2: Fetch accepted meetings where the employee is an attendee
         cur.execute("""
             SELECT 
                 m.meeting_id,
@@ -755,17 +762,17 @@ def get_accepted_meetings():
                 m.manager_approval,
                 e.full_name
             FROM meetings m
+            JOIN meeting_attendees ma ON m.meeting_id = ma.meeting_id
             JOIN Employee e ON m.organizer_id = e.empid
             WHERE LOWER(m.manager_approval) = 'approved'
-        """)
+              AND ma.employee_id = %s
+        """, (employee_id,))
         meetings = cur.fetchall()
-
-        for row in meetings:
-            print(f"Meeting ID: {row[0]}, Date: {row[3]}, Type: {type(row[3])}")
 
         cur.close()
         conn.close()
 
+        # Step 3: Format results as JSON
         result = []
         for row in meetings:
             result.append({
@@ -787,7 +794,7 @@ def get_accepted_meetings():
         print("🔴 Error fetching accepted meetings:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/api/update-meeting-status', methods=['POST'])
 def update_meeting_status():
     try:
