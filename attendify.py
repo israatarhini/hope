@@ -756,7 +756,7 @@ def get_accepted_meetings():
                 e.full_name
             FROM meetings m
             JOIN Employee e ON m.organizer_id = e.empid
-            WHERE LOWER(m.manager_approval) = 'accepted'
+            WHERE LOWER(m.manager_approval) = 'approved'
         """)
         meetings = cur.fetchall()
 
