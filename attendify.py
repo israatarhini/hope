@@ -172,68 +172,6 @@ def get_employee_full(empid):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# @app.route('/api/checkin', methods=['POST'])
-# def checkin():
-#     try:
-#         data = request.json
-#         empid = data.get('empid')
-#         date = data.get('date')
-#         time = data.get('time')
-
-#         conn = get_db_connection()
-#         cur = conn.cursor()
-#         cur.execute("""
-#             INSERT INTO attendance (empid, checkinDate, checkinTime)
-#             VALUES (%s, %s, %s)
-#             ON DUPLICATE KEY UPDATE checkinTime = VALUES(checkinTime)
-#         """, (empid, date, time))
-
-#         conn.commit()
-#         cur.close()
-#         conn.close()
-
-#         return jsonify({"message": "Check-in saved successfully"}), 201
-
-#     except Exception as e:
-#         print("Check-in error:", e)
-#         traceback.print_exc()
-#         return jsonify({"error": str(e)}), 500
-
-# @app.route('/api/checkout', methods=['POST'])
-# def check_out():
-#     try:
-#         data = request.json
-#         empid = data.get('empid')
-#         date = data.get('date')
-#         time = data.get('time')
-
-#         if not all([empid, date, time]):
-#             return jsonify({"error": "Missing required fields"}), 400
-
-#         conn = get_db_connection()
-#         cur = conn.cursor()
-
-#         cur.execute("SELECT id FROM attendance WHERE empid = %s AND checkoutDate = %s", (empid, date))
-#         result = cur.fetchone()
-
-#         if result:
-#             cur.execute("UPDATE attendance SET checkoutTime = %s WHERE empid = %s AND checkoutDate = %s",
-#                         (time, empid, date))
-#         else:
-#             cur.execute("INSERT INTO attendance (empid, checkoutDate, checkoutTime) VALUES (%s, %s, %s)",
-#                         (empid, date, time))
-
-#         conn.commit()
-#         cur.close()
-#         conn.close()
-
-#         return jsonify({"message": "Check-out saved"}), 201
-
-#     except Exception as e:
-#         print("Checkout error:", e)
-#         traceback.print_exc()
-#         return jsonify({"error": str(e)}), 500
-
 @app.route('/api/checkin', methods=['POST'])
 def checkin():
     try:
@@ -799,6 +737,57 @@ def get_pending_meetings():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/get-accepted-meetings', methods=['GET'])
+def get_accepted_meetings():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 
+                m.meeting_id,
+                m.title,
+                m.description,
+                m.meeting_date,
+                m.start_time,
+                m.end_time,
+                m.location,
+                m.organizer_id,
+                m.manager_approval,
+                e.full_name
+            FROM meetings m
+            JOIN Employee e ON m.organizer_id = e.empid
+            WHERE LOWER(m.manager_approval) = 'accepted'
+        """)
+        meetings = cur.fetchall()
+
+        for row in meetings:
+            print(f"Meeting ID: {row[0]}, Date: {row[3]}, Type: {type(row[3])}")
+
+        cur.close()
+        conn.close()
+
+        result = []
+        for row in meetings:
+            result.append({
+                "meeting_id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "meeting_date": str(row[3]) if row[3] else None,
+                "start_time": str(row[4]) if row[4] else None,
+                "end_time": str(row[5]) if row[5] else None,
+                "location": row[6],
+                "organizer_id": row[7],
+                "manager_approval": row[8],
+                "employee_name": row[9]
+            })
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("🔴 Error fetching accepted meetings:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/update-meeting-status', methods=['POST'])
 def update_meeting_status():
     try:
@@ -902,57 +891,6 @@ def get_my_meetings():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-# @app.route('/api/attendance-checkins', methods=['GET'])
-# def get_attendance_checkins():
-#     try:
-#         date_filter = request.args.get('date')  # e.g., '2025-06-04'
-#         conn = get_db_connection()
-#         cur = conn.cursor()
-
-#         if date_filter:
-#             cur.execute("""
-#                 SELECT e.full_name, a.checkinDate, a.checkinTime
-#                 FROM attendance a
-#                 JOIN Employee e ON a.empid = e.empid
-#                 WHERE a.checkinDate = %s AND a.checkinTime IS NOT NULL
-#                 ORDER BY a.checkinTime ASC
-#             """, (date_filter,))
-#         else:
-#             cur.execute("""
-#                 SELECT e.full_name, a.checkinDate, a.checkinTime
-#                 FROM attendance a
-#                 JOIN Employee e ON a.empid = e.empid
-#                 WHERE a.checkinDate IS NOT NULL AND a.checkinTime IS NOT NULL
-#                 ORDER BY a.checkinDate ASC, a.checkinTime ASC
-#             """)
-
-#         results = cur.fetchall()
-#         cur.close()
-#         conn.close()
-
-#         attendance_data = []
-#         for row in results:
-#             checkin_time = row[2]
-#             if isinstance(checkin_time, timedelta):
-#                 total_seconds = int(checkin_time.total_seconds())
-#                 hours, remainder = divmod(total_seconds, 3600)
-#                 minutes, seconds = divmod(remainder, 60)
-#                 formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-#             else:
-#                 formatted_time = str(checkin_time)
-
-#             attendance_data.append({
-#                 "employee": row[0],
-#                 "date": row[1].strftime('%Y-%m-%d'),
-#                 "time": formatted_time
-#             })
-
-#         return jsonify({"attendance": attendance_data}), 200
-
-#     except Exception as e:
-#         print("🔴 Attendance fetch error:", e)
-#         traceback.print_exc()
-#         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/attendance-checkins', methods=['GET'])
 def get_attendance_checkins():
