@@ -167,7 +167,7 @@ def get_employee_full(empid):
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT full_name, username, email, phone_number, occupation, faculty, empPhoto
+            SELECT full_name, username, password, email, phone_number, occupation, faculty, empPhoto
             FROM Employee
             WHERE empid = %s
         """, (empid,))
@@ -182,10 +182,11 @@ def get_employee_full(empid):
             return jsonify({
                 "full_name": row[0],
                 "username": row[1],
-                "email": row[2],
-                "phone_number": row[3],
-                "occupation": row[4],
-                "faculty": row[5],
+                "password":row[2],
+                "email": row[3],
+                "phone_number": row[4],
+                "occupation": row[5],
+                "faculty": row[6],
                 # "empPhoto": empPhoto_base64
             })
         else:
@@ -669,6 +670,7 @@ def update_employee(empid):
 
         full_name = data.get('full_name')
         username = data.get('username')
+        password = data.get('password')
         email = data.get('email')
         phone_number = data.get('phone_number')
         occupation = data.get('occupation')
@@ -681,6 +683,7 @@ def update_employee(empid):
             UPDATE Employee
             SET full_name = %s,
                 username = %s,
+                password = %s,
                 email = %s,
                 phone_number = %s,
                 occupation = %s,
@@ -688,7 +691,7 @@ def update_employee(empid):
             WHERE empid = %s
         """
 
-        cur.execute(update_query, (full_name, username, email, phone_number, occupation, faculty, empid))
+        cur.execute(update_query, (full_name, username, password, email, phone_number, occupation, faculty, empid))
         conn.commit()
         rows_affected = cur.rowcount
 
