@@ -53,16 +53,28 @@ def save_employee():
         password = data.get('password')
         occupation = data.get('occupation')
         faculty = data.get('faculty')
+        company_name = data.get('company_name')
 
-        print(f"🟡 Parsed fields: Full Name: {full_name}, Username: {username}, Phone: {phone_number}, Email: {email}, Password: {password}, Occupation: {occupation}, Faculty: {faculty}")
+        print(f"🟡 Parsed fields: Full Name: {full_name}, Username: {username}, Phone: {phone_number}, Email: {email}, Password: {password}, Occupation: {occupation}, Faculty: {faculty}, Company Name: {company_name}")
 
         conn = get_db_connection()
         cur = conn.cursor()
 
+        # Get company_id from company_name
+        cur.execute("SELECT company_id FROM Company WHERE company_name = %s", (company_name,))
+        company_row = cur.fetchone()
+
+        if company_row:
+            company_id = company_row[0]
+        else:
+            # If company not found, return error or optionally create new company
+            return jsonify({"error": "Company not found"}), 400
+
+        # Insert into Employee table including company_id
         cur.execute("""
-            INSERT INTO Employee (full_name, username, phone_number, email, password, occupation, faculty)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (full_name, username, phone_number, email, password, occupation, faculty))
+            INSERT INTO Employee (full_name, username, phone_number, email, password, occupation, faculty, company_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (full_name, username, phone_number, email, password, occupation, faculty, company_id))
 
         print("🟢 Row count after insert:", cur.rowcount)  # Should be 1
 
@@ -83,7 +95,7 @@ def save_employee():
         print("🔴 Error:", e)
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/test-db', methods=['GET'])
 def test_db():
     try:
