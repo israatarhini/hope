@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import pymysql
 pymysql.install_as_MySQLdb()
 import MySQLdb
+from flask import Flask, request, jsonify
 from flask import send_file
 import io
 import os
@@ -1105,36 +1106,38 @@ def get_leave_summary():
 @app.route('/api/add_company', methods=['POST'])
 def add_company():
     data = request.form
-    print("Received form data:", data)  # Check logs if data is coming properly
+    print("Received data:", data)
 
     company_name = data.get('company_name')
     manager_name = data.get('manager_name')
+
+    if not company_name or not manager_name:
+        return jsonify({"error": "Company name and Manager name are required"}), 400
+
     location = data.get('location')
     description = data.get('description')
     email = data.get('email')
     phone_number = data.get('phone_number')
     company_type = data.get('company_type')
 
-    # Validate required fields, simple example
-    if not company_name or not manager_name:
-        return jsonify({"error": "Company name and Manager name are required"}), 400
+    query = """
+        INSERT INTO Company (company_name, manager_name, location, description, email, phone_number, company_type)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = """
-            INSERT INTO Company (company_name, manager_name, location, description, email, phone_number, company_type)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """
         cursor.execute(query, (company_name, manager_name, location, description, email, phone_number, company_type))
         conn.commit()
         cursor.close()
         conn.close()
         return jsonify({"message": "Company added successfully"}), 200
     except Exception as e:
-        print("Database error:", e)
+        import traceback
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
-             
+          
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
