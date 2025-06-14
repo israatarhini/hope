@@ -1152,7 +1152,153 @@ def add_company():
         import traceback
         print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
-          
+
+@app.route('/api/employee-attendance-checkins', methods=['GET'])
+def employee_attendance_checkins():
+    empid = request.args.get('empid', type=int)
+    if not empid:
+        return jsonify({"error": "Missing required parameter 'empid'"}), 400
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT e.full_name, a.checkinDate, a.checkinTime
+            FROM attendance a
+            JOIN Employee e ON a.empid = e.empid
+            WHERE a.empid = %s AND a.checkinDate IS NOT NULL AND a.checkinTime IS NOT NULL
+            ORDER BY a.checkinDate ASC, a.checkinTime ASC
+        """, (empid,))
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        attendance_data = []
+        for row in results:
+            checkin_time = row[2]
+            if isinstance(checkin_time, timedelta):
+                total_seconds = int(checkin_time.total_seconds())
+                hours, remainder = divmod(total_seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            else:
+                formatted_time = str(checkin_time)
+
+            attendance_data.append({
+                "employee": row[0],
+                "date": row[1].strftime('%Y-%m-%d'),
+                "time": formatted_time
+            })
+
+        return jsonify({"attendance": attendance_data}), 200
+
+    except Exception as e:
+        print("🔴 Employee Attendance Checkins Error:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/employee-weekly-attendance', methods=['GET'])
+def employee_weekly_attendance():
+    empid = request.args.get('empid', type=int)
+    if not empid:
+        return jsonify({"error": "Missing required parameter 'empid'"}), 400
+
+    try:
+        start_param = request.args.get('start_date')
+        if start_param:
+            start_date = datetime.strptime(start_param, "%Y-%m-%d").date()
+        else:
+            start_date = datetime.today().date() - timedelta(days=6)
+
+        end_date = start_date + timedelta(days=6)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if employee exists and get full_name
+        cur.execute("SELECT full_name FROM Employee WHERE empid = %s", (empid,))
+        emp = cur.fetchone()
+        if not emp:
+            return jsonify({"error": "Employee not found"}), 404
+        full_name = emp[0]
+
+        cur.execute("""
+            SELECT checkinDate
+            FROM attendance
+            WHERE empid = %s AND checkinDate BETWEEN %s AND %s AND checkinTime IS NOT NULL
+        """, (empid, start_date, end_date))
+        checkins = cur.fetchall()
+        checked_in_dates = {row[0] for row in checkins}
+
+        present_days = sum(
+            1 for i in range(7)
+            if (start_date + timedelta(days=i)) in checked_in_dates
+        )
+        absent_days = 7 - present_days
+
+        attendance_summary = {
+            "employee": full_name,
+            "present": present_days,
+            "absent": absent_days
+        }
+
+        cur.close()
+        conn.close()
+
+        return jsonify({"attendance_summary": attendance_summary}), 200
+
+    except Exception as e:
+        print("🔴 Employee Weekly Attendance Fetch Error:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/employee-leave-summary', methods=['GET'])
+def employee_leave_summary():
+    empid = request.args.get('empid', type=int)
+    if not empid:
+        return jsonify({"error": "Missing required parameter 'empid'"}), 400
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        query = """
+            SELECT leave_type, status, COUNT(*) as leave_count
+            FROM leave_request
+            WHERE empid = %s
+        """
+        params = [empid]
+
+        if start_date and end_date:
+            query += " AND leave_start_date >= %s AND leave_end_date <= %s"
+            params.extend([start_date, end_date])
+
+        query += " GROUP BY leave_type, status"
+
+        cur.execute(query, params)
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        summary = {}
+        for leave_type, status, count in results:
+            if leave_type not in summary:
+                summary[leave_type] = {}
+            summary[leave_type][status] = count
+
+        return jsonify({"leave_summary": summary}), 200
+
+    except Exception as e:
+        print("🔴 Employee Leave Summary Fetch Error:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+              
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
