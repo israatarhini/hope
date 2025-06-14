@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import pymysql
 pymysql.install_as_MySQLdb()
 import MySQLdb
+from flask import send_file
+import io
 import os
 import traceback
 from datetime import datetime, timedelta
@@ -402,6 +404,31 @@ def submit_leave():
 
     except Exception as e:
         print("🔴 Error submitting leave:", e)
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/leave-file/<int:request_id>', methods=['GET'])
+def get_leave_file(request_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(dictionary=True)
+
+        cur.execute("SELECT file_data, file_type FROM leave_request WHERE request_id = %s", (request_id,))
+        file_row = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        if file_row and file_row['file_data']:
+            return send_file(
+                io.BytesIO(file_row['file_data']),
+                mimetype=file_row['file_type'],
+                as_attachment=False  # True = force download
+            )
+        else:
+            return jsonify({"error": "File not found"}), 404
+
+    except Exception as e:
+        print("🔴 Error fetching file:", e)
         return jsonify({"error": str(e)}), 500
     
 @app.route('/api/leave-count/<int:empid>', methods=['GET'])
