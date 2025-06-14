@@ -1105,6 +1105,7 @@ def get_leave_summary():
 @app.route('/api/add_company', methods=['POST'])
 def add_company():
     data = request.form
+    print("Received form data:", data)  # Check logs if data is coming properly
 
     company_name = data.get('company_name')
     manager_name = data.get('manager_name')
@@ -1114,7 +1115,9 @@ def add_company():
     phone_number = data.get('phone_number')
     company_type = data.get('company_type')
 
-    # Validate inputs (optional)
+    # Validate required fields, simple example
+    if not company_name or not manager_name:
+        return jsonify({"error": "Company name and Manager name are required"}), 400
 
     try:
         conn = get_db_connection()
@@ -1129,8 +1132,9 @@ def add_company():
         conn.close()
         return jsonify({"message": "Company added successfully"}), 200
     except Exception as e:
+        print("Database error:", e)
         return jsonify({"error": str(e)}), 500
-                  
+             
 # STEP 8: Ensure Flask is in debug mode for full error logs
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
