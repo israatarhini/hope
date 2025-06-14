@@ -410,19 +410,19 @@ def submit_leave():
 def get_leave_file(request_id):
     try:
         conn = get_db_connection()
-        cur = conn.cursor(dictionary=True)
+        cur = conn.cursor()
 
         cur.execute("SELECT file_data, file_type FROM leave_request WHERE request_id = %s", (request_id,))
-        file_row = cur.fetchone()
+        row = cur.fetchone()
 
         cur.close()
         conn.close()
 
-        if file_row and file_row['file_data']:
+        if row and row[0]:  # row[0] = file_data, row[1] = file_type
             return send_file(
-                io.BytesIO(file_row['file_data']),
-                mimetype=file_row['file_type'],
-                as_attachment=False  # True = force download
+                io.BytesIO(row[0]),
+                mimetype=row[1],
+                as_attachment=False
             )
         else:
             return jsonify({"error": "File not found"}), 404
