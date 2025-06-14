@@ -378,29 +378,27 @@ def submit_leave():
         leave_type = request.form.get('leave_type')
 
         file = request.files.get('file')
-        file_name = None
+        file_data = None
+        file_type = None
 
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            file_name = filename
+            file_type = file.content_type
+            file_data = file.read()  # read binary data for DB
 
         conn = get_db_connection()
         cur = conn.cursor()
 
         cur.execute("""
-            INSERT INTO leave_request (empid, leave_start_date, leave_end_date, status, leave_type, file_name)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (empid, start_date, end_date, status, leave_type, file_name))
-
-        # Insert into specific leave type table if needed
-        # (same as your previous code...)
+            INSERT INTO leave_request (
+                empid, leave_start_date, leave_end_date, status, leave_type, file_data, file_type
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (empid, start_date, end_date, status, leave_type, file_data, file_type))
 
         conn.commit()
         cur.close()
         conn.close()
 
-        return jsonify({"message": "Leave request with file submitted successfully"}), 201
+        return jsonify({"message": "Leave request submitted with file successfully"}), 201
 
     except Exception as e:
         print("🔴 Error submitting leave:", e)
